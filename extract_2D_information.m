@@ -60,7 +60,7 @@ PDF = tuning_map./sum(tuning_map(:));
 PDF(PDF==0) = eps; % This is to prevent log values to reach infinity during KL divergence computation
 
 for i = 1:numel(PDF)
-KL_temp(i) = PDF(i)*log2(PDF(i)./occupancyProbChance);
+KL_temp(i) = PDF(i)*log2(PDF(i)*numBins);
 end
 
 KL_divergence = sum(KL_temp);
