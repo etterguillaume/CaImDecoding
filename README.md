@@ -1,8 +1,7 @@
-# CaImDecoding
-Decoding behavior from calcium imaging data
+# Decoding behavior from calcium imaging data
 
-This is the supporting code and data for the manuscript:
-'A probabilistic framework for decoding behavior from in vivo calcium imaging data'
-by Guillaume Etter, Frederic Manseau, and Sylvain Williams
+This is the supporting code and data for the manuscript: 'A probabilistic framework for decoding behavior from in vivo calcium imaging data' by Guillaume Etter, Frederic Manseau, and Sylvain Williams
 
-This repository only includes Matlab codes for now, but a Python notebook will be available soon
+Link to the preprint repository: https://www.biorxiv.org/content/10.1101/827030v1
+
+This Github repository only includes Matlab codes for now, but a Python notebook will be available soon
