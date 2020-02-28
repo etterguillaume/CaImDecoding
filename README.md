@@ -4,4 +4,13 @@ This is the supporting code and data for the manuscript: 'A probabilistic framew
 
 Link to the preprint repository: https://www.biorxiv.org/content/10.1101/827030v1
 
-This Github repository only includes Matlab codes for now, but a Python notebook will be available soon
+Last update on: 2020/02/28
+- extract_1D_information computes MI (instead of KLD), prior and posterior probability distributions
+- Added bootstrapping in fig1
+- Simplified fig5: confidence intervals are sufficient to estimate encoding predicition variability
+
+COMING SOON:
+- Python notebook version
+- Functional implementation
+- Generalization of the code for discrete states (instead of binning continuous states in the present form)
+
