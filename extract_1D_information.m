@@ -1,6 +1,6 @@
-function [KL_divergence, PDF, occupancy_vector, prob_being_active, tuning_curve ] = extract_2D_information(binarized_trace, interp_behav_vec, ca_time, bin_vector, inclusion_vector)
+function [MI, posterior, occupancy_vector, prob_being_active, prior ] = extract_1D_information(binarized_trace, interp_behav_vec, bin_vector, inclusion_vector)
 %MSPLACE_CELL_OF_POSITIONS Analyse and plot spatial information
-%   This function plots in space the position related to calcium 
+%   This function plots in space the position related to calcium
 
 % Copyright (C) 2017-2019 by Guillaume Etter
 %
@@ -11,7 +11,7 @@ function [KL_divergence, PDF, occupancy_vector, prob_being_active, tuning_curve 
 % Contact: etterguillaume@gmail.com
 
 % binary_trace: logical vector representing neurons active/inactive periods
-% 
+%
 % interp_behav_vec: m x 2  matrix representing behavioral state in two dimensions (eg position in a
 % maze). Has to be the same size as binary_trace
 %
@@ -23,46 +23,43 @@ function [KL_divergence, PDF, occupancy_vector, prob_being_active, tuning_curve 
 % inclusion_vec: logical vector including (1) or excluding (0) corresponding timestamps. Has to be the same size as binary_trace.
 
 %% Ignore excluded periods
-ca_time = ca_time(inclusion_vector);
 binarized_trace = binarized_trace(inclusion_vector);
 interp_behav_vec = interp_behav_vec(inclusion_vector);
 
 %% Create bin vectors
-numBins = length(bin_vector);
-prob_being_active = sum(binarized_trace)./length(ca_time); %Expressed in probability of firing (<1)
-
-occupancyProbChance = 1/numBins;
-jointProbChance = prob_being_active*occupancyProbChance;
+prob_being_active = sum(binarized_trace)./length(binarized_trace); % Expressed in probability of firing (<1)
 
 %% Compute joint probabilities (of cell being active while being in a state bin)
-tuning_curve = zeros(length(bin_vector)-1,1);
+prior = zeros(length(bin_vector)-1,1);
 occupancy_vector = zeros(length(bin_vector)-1,1);
+MI = 0;
 
-    for i = 1:length(bin_vector)-1
-        binarized_spatial_vector = 0*ca_time;
-        position_idx = find(interp_behav_vec>bin_vector(i) & interp_behav_vec < bin_vector(i+1));
+for i = 1:length(bin_vector)-1
+    binarized_spatial_vector = 0*binarized_trace;
+    position_idx = find(interp_behav_vec >= bin_vector(i) & interp_behav_vec < bin_vector(i+1));
+    
+    if ~isempty(position_idx)
+        binarized_spatial_vector(position_idx)=1;
+        occupancy_vector(i) = length(position_idx)/length(binarized_trace);
+        activity_in_bin_idx = find(binarized_trace == 1 & binarized_spatial_vector == 1);
+        inactivity_in_bin_idx = find(binarized_trace == 0 & binarized_spatial_vector == 1);
+        prior(i) = length(activity_in_bin_idx)/length(position_idx);
         
-        if ~isempty(position_idx)
-            binarized_spatial_vector(position_idx)=1;
-            occupancy_vector(i) = length(position_idx);
-            activity_in_bin_idx = find(binarized_trace == 1 & binarized_spatial_vector == 1);
-            joint_prob_active_in_bin = length(activity_in_bin_idx)/length(position_idx);
-            tuning_curve(i) = joint_prob_active_in_bin;
+        joint_prob_active = length(activity_in_bin_idx)./length(binarized_trace);
+        joint_prob_inactive = length(inactivity_in_bin_idx)./length(binarized_trace);
+        prob_in_bin = length(position_idx)./length(binarized_trace);
+        
+        if joint_prob_active ~= 0
+            MI = MI + joint_prob_active*log2(joint_prob_active./(prob_in_bin*prob_being_active));
+        end
+        if joint_prob_inactive ~= 0
+            MI = MI + joint_prob_inactive*log2(joint_prob_inactive./(prob_in_bin*(1-prob_being_active)));
         end
     end
-    
-    occupancy_vector = occupancy_vector./sum(occupancy_vector);
-    
-PDF = tuning_curve./sum(tuning_curve);
-PDF(PDF==0) = eps; % This is to prevent log values to reach infinity during KL divergence computation
-
-for i = 1:length(PDF)
-KL_temp(i) = PDF(i)*log2(PDF(i)*numBins);
 end
 
-KL_divergence = sum(KL_temp);
-    
-    
+posterior = prior.*occupancy_vector/prob_being_active;
+
 end
 
 

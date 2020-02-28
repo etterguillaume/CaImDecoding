@@ -14,6 +14,7 @@ z_threshold = 2; % A 2 standard-deviation threshold is usually optimal to differ
 % activity assuming it has a lower sampling frequency than neural activity
 interp_behav_vec(:,1) = interpolate_behavior(behav_vec(:,1), behav_time, ca_time); % in the X dimension
 interp_behav_vec(:,2) = interpolate_behavior(behav_vec(:,2), behav_time, ca_time); % in the Y dimension
+interp_behav_vec(end,:) = interp_behav_vec(end-1,:); % Make sure to interpolate or remove every NaN so that every timepoint has a corresponding behavioral state
 
 %% Compute velocities
 % In this example, we will ignore moments when the mouse is immobile
@@ -30,36 +31,37 @@ inclusion_vector = running_ts; % Only include periods of running
 %% Compute occupancy and joint probabilities
 % You can use 'min(behav_vec)' and 'max(behav_vec)'  to estimate the
 % boundaries of the behavior vector (in our case, location in space)
-X_bin_vector = 3:3:42; % start : bin_size : end
-X_bin_size = X_bin_vector(2) - X_bin_vector(1);
-X_bin_centers_vector = X_bin_vector + X_bin_size/2;
+bin_size = 3;
+X_bin_vector = min(interp_behav_vec(:,1)):bin_size:max(interp_behav_vec(:,1))+bin_size;
+X_bin_centers_vector = X_bin_vector + bin_size/2;
 X_bin_centers_vector(end) = [];
-Y_bin_size = X_bin_size;
-Y_bin_vector = X_bin_vector;
-Y_bin_centers_vector = X_bin_centers_vector; % this will bin space in a square
 
-[KL_divergence, PDF, occupancy_map, prob_being_active, tuning_map ] = extract_2D_information(binarized_trace, interp_behav_vec, ca_time, X_bin_vector, Y_bin_vector, inclusion_vector);
+Y_bin_vector = min(interp_behav_vec(:,2)):bin_size:max(interp_behav_vec(:,2))+bin_size;
+Y_bin_centers_vector = Y_bin_vector + bin_size/2;
+Y_bin_centers_vector(end) = [];
+
+[MI, PDF, occupancy_map, prob_being_active, tuning_map] = extract_2D_information(binarized_trace, interp_behav_vec, X_bin_vector, Y_bin_vector, inclusion_vector);
 peak_joint_probability = max(tuning_map(:));
 
 figure
 subplot(3,1,1)
 imagesc(X_bin_centers_vector,Y_bin_centers_vector,tuning_map)
 daspect([1 1 1])
-title 'Joint probability'
+title 'Prior probability density function'
 xlabel 'Position (cm)'
 ylabel 'Position (cm)'
 colorbar
 subplot(3,1,2)
 imagesc(X_bin_centers_vector,Y_bin_centers_vector,occupancy_map)
 daspect([1 1 1])
-title 'Relative occupancy'
+title 'Likelihood (occupancy)'
 xlabel 'Position (cm)'
 ylabel 'Position (cm)'
 colorbar
 subplot(3,1,3)
-surf(X_bin_centers_vector,Y_bin_centers_vector,PDF)
-daspect([1 1 0.01])
-title 'Probability density function'
+imagesc(X_bin_centers_vector,Y_bin_centers_vector,PDF)
+daspect([1 1 1])
+title 'Posterior probability density function'
 xlabel 'Position (cm)'
 ylabel 'Position (cm)'
 colorbar
@@ -78,19 +80,34 @@ for k = 1:numShuffles
     shuffled_binarized(1:random_ts) = binarized_trace(end-random_ts+1:end);
     shuffled_binarized(end-random_ts+1:end) = binarized_trace(1:random_ts);
     
-    [shuffled_KLD(k), shuffled_PDF(:,:,k), ~ , ~, shuffled_data(:,:,k)] = extract_2D_information(shuffled_binarized, interp_behav_vec, ca_time, X_bin_vector, Y_bin_vector, running_ts);
-    shuffled_peak_joint_probability(k) = max(shuffled_data(:));
+    [~, ~, ~, ~, shuffled_tuning_maps(:,:,k)] = extract_2D_information(shuffled_binarized, interp_behav_vec, X_bin_vector, Y_bin_vector, running_ts);
 end
 
-%% Compute z map
-average_shuffled_map = mean(shuffled_data,3);
-std_shuffled_map = std(shuffled_data,[],3);
-z_map = (tuning_map-average_shuffled_map)./std_shuffled_map;
+%% Compute significance - Method 1: pN
+pN = sum(shuffled_tuning_maps > tuning_map,3)/numShuffles; %  pN, supra-threshold tests
 
-figure
-imagesc(X_bin_centers_vector,Y_bin_centers_vector,z_map)
-daspect([1 1 1])
-colorbar
-title 'Z-scored tuning map'
-xlabel 'Position (cm)'
-ylabel 'Position (cm)'
+significant_tuning_map = tuning_map;
+significant_tuning_map(pN > 0.05) = 0;
+
+%% Compute significance - Method 2: bootstrapping
+numFrames = length(binarized_trace);
+half_ts = ceil(numFrames/2);
+
+for k = 1:numShuffles
+    random_ts = ceil(rand*length(ca_time));
+    shuffled_binarized = zeros(length(binarized_trace),1);
+    % Permute the trace
+    shuffled_binarized(1:random_ts) = binarized_trace(end-random_ts+1:end);
+    shuffled_binarized(end-random_ts+1:end) = binarized_trace(1:random_ts);
+    
+    bootstrap_ts = zeros(numFrames,1);
+    bootstrap_ts(1:half_ts) = 1;
+    bootstrap_ts = logical(bootstrap_ts(randperm(numFrames)));
+    bootstrap_ts(running_ts == 0) = 0;
+    
+    %% Compute the actual tuning curve using a bootstrapped sample
+    [actual_bootstrap_MI(k), actual_bootstrap_PDF(:,:,k), ~, actual_bootstrap_prob_being_active(k), actual_bootstrap_tuning_map(:,:,k) ] = extract_2D_information(binarized_trace, interp_behav_vec, X_bin_vector, Y_bin_vector, bootstrap_ts);
+    
+    %% Compute the shuffled tuning curve using the same bootstrapped sample
+    [shuffled_bootstrap_MI(k), shuffled_bootstrap_PDF(:,:,k), ~, shuffled_bootstrap_prob_being_active(k), shuffled_bootstrap_tuning_map(:,:,k)] = extract_2D_information(shuffled_binarized, interp_behav_vec, X_bin_vector, Y_bin_vector, bootstrap_ts);
+end

@@ -3,6 +3,8 @@ function [training_ts] = create_training_set(ca_time, training_set_creation_meth
 %   Detailed explanation goes here
 
 training_ts = zeros(1,length(ca_time));
+numFrames = length(ca_time);
+half_ts = ceil(numFrames*training_set_portion);
 
 switch training_set_creation_method
     case 'odd'
@@ -12,17 +14,8 @@ switch training_set_creation_method
     first_portion = 1:ceil(length(ca_time*training_set_portion)/2);
     training_ts(first_portion) = 1;
     case 'random'
-    training_ts_list = [];
-    numTrainingTs = ceil(training_set_portion*length(ca_time));
-    random_ts = round(rand*length(ca_time));
-    while length(training_ts_list) < numTrainingTs
-        while ismember(random_ts,training_ts_list) | random_ts == 0
-            random_ts = round(rand*length(ca_time));
-        end
-        training_ts_list(end+1) = random_ts;
-    end
-    training_ts = 0*ca_time;
-    training_ts(training_ts_list) = 1;
+    training_ts(1:half_ts) = 1;
+    training_ts = logical(training_ts(randperm(numFrames)));
     otherwise
     error("Please define a valid method to create a training set: 'odd', 'first_portion', or 'random'");
 end

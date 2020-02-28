@@ -1,6 +1,6 @@
-function [KL_divergence, PDF, occupancy_vector, prob_being_active, tuning_map ] = extract_2D_information(binarized_trace, interp_behav_vec, ca_time, X_bin_vector, Y_bin_vector, inclusion_vector)
+function [MI, posterior, occupancy_map, prob_being_active, prior ] = extract_2D_information(binarized_trace, interp_behav_vec, X_bin_vector, Y_bin_vector, inclusion_vector)
 %MSPLACE_CELL_OF_POSITIONS Analyse and plot spatial information
-%   This function plots in space the position related to calcium 
+%   This function plots in space the position related to calcium
 
 % Copyright (C) 2017-2019 by Guillaume Etter
 %
@@ -11,7 +11,7 @@ function [KL_divergence, PDF, occupancy_vector, prob_being_active, tuning_map ] 
 % Contact: etterguillaume@gmail.com
 
 % binary_trace: logical vector representing neurons active/inactive periods
-% 
+%
 % interp_behav_vec: m x 2  matrix representing behavioral state in two dimensions (eg position in a
 % maze). Has to be the same size as binary_trace
 %
@@ -23,49 +23,45 @@ function [KL_divergence, PDF, occupancy_vector, prob_being_active, tuning_map ] 
 % inclusion_vec: logical vector including (1) or excluding (0) corresponding timestamps. Has to be the same size as binary_trace.
 
 %% Ignore excluded periods
-ca_time = ca_time(inclusion_vector);
 binarized_trace = binarized_trace(inclusion_vector);
 interp_behav_vec = interp_behav_vec(inclusion_vector,:);
 
 %% Create bin vectors
-numBins = length(X_bin_vector)*length(Y_bin_vector);
-prob_being_active = sum(binarized_trace)./length(ca_time);
-
-occupancyProbChance = 1/numBins;
-jointProbChance = prob_being_active*occupancyProbChance;
+prob_being_active = sum(binarized_trace)./length(binarized_trace);
 
 %% Compute joint probabilities (of cell being active while being in a state bin)
-tuning_map = zeros(length(Y_bin_vector)-1,length(X_bin_vector)-1);
-occupancy_vector = zeros(length(Y_bin_vector)-1,length(X_bin_vector)-1);
+prior = zeros(length(Y_bin_vector)-1,length(X_bin_vector)-1);
+occupancy_map = zeros(length(Y_bin_vector)-1,length(X_bin_vector)-1);
+MI = 0;
 
-    
-    for y = 1:length(Y_bin_vector)-1
-        for x = 1:length(X_bin_vector)-1
-        binarized_spatial_vector = 0*ca_time;
-        position_idx = find(interp_behav_vec(:,1)>X_bin_vector(x) & interp_behav_vec(:,1) < X_bin_vector(x+1) & interp_behav_vec(:,2)>Y_bin_vector(y) & interp_behav_vec(:,2) < Y_bin_vector(y+1));
+for y = 1:length(Y_bin_vector)-1
+    for x = 1:length(X_bin_vector)-1
+        binarized_spatial_vector = 0*binarized_trace;
+        position_idx = find(interp_behav_vec(:,1) >= X_bin_vector(x) & interp_behav_vec(:,1) < X_bin_vector(x+1) & interp_behav_vec(:,2) >= Y_bin_vector(y) & interp_behav_vec(:,2) < Y_bin_vector(y+1));
         
         if ~isempty(position_idx)
             binarized_spatial_vector(position_idx)=1;
-            occupancy_vector(y,x) = length(position_idx);
+            occupancy_map(y,x) = length(position_idx)/length(binarized_trace);
             activity_in_bin_idx = find(binarized_trace == 1 & binarized_spatial_vector == 1);
-            joint_prob_active_in_bin = length(activity_in_bin_idx)/length(position_idx);
-            tuning_map(y,x) = joint_prob_active_in_bin;
-        end
+            inactivity_in_bin_idx = find(binarized_trace == 0 & binarized_spatial_vector == 1);
+            prior(y,x) = length(activity_in_bin_idx)/length(position_idx);
+            
+            joint_prob_active = length(activity_in_bin_idx)/length(binarized_trace);
+            joint_prob_inactive = length(inactivity_in_bin_idx)/length(binarized_trace);
+            prob_in_bin = length(position_idx)./length(binarized_trace);
+            
+            if joint_prob_active ~= 0
+                MI = MI + joint_prob_active*log2(joint_prob_active./(prob_in_bin*prob_being_active));
+            end
+            if joint_prob_inactive ~= 0
+                MI = MI + joint_prob_inactive*log2(joint_prob_inactive./(prob_in_bin*(1-prob_being_active)));
+            end
         end
     end
-    
-    occupancy_vector = occupancy_vector./sum(occupancy_vector);
-
-PDF = tuning_map./sum(tuning_map(:));
-PDF(PDF==0) = eps; % This is to prevent log values to reach infinity during KL divergence computation
-
-for i = 1:numel(PDF)
-KL_temp(i) = PDF(i)*log2(PDF(i)*numBins);
 end
 
-KL_divergence = sum(KL_temp);
-    
-    
+posterior = prior.*occupancy_map/prob_being_active;
+
 end
 
 

@@ -7,11 +7,12 @@ z_delta_x(end+1) = 0;
 z_delta_x(isnan(z_delta_x)) = 0;
 z_delta_x = zscore(z_delta_x);
 
-if direction == 'right'
+switch direction
+    case 'right'
     direction_indices = z_delta_x > 0.2;
-elseif direction == 'left'
+    case 'left'
     direction_indices = z_delta_x < -0.2;
-else
+    otherwise
     error('Please indicate a valid direction. The input variable direction should be either "right" or "left"');
 end
 

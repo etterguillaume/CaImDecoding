@@ -12,7 +12,7 @@ z_threshold = 2; % A 2 standard-deviation threshold is usually optimal to differ
 % In most cases, behavior data has to be interpolated to match neural temporal
 % activity assuming it has a lower sampling frequency than neural activity
 [interp_behav_vec] = interpolate_behavior(behav_vec, behav_time, ca_time);
-
+interp_behav_vec(end) = interp_behav_vec(end-1);
 %% Compute velocities
 % In this example, we will ignore moments when the mouse is immobile
 [velocity] = extract_velocity(interp_behav_vec, ca_time);
@@ -23,8 +23,10 @@ min_speed_threshold = 5; % 2 cm.s-1
 running_ts = velocity > min_speed_threshold;
 
 %% Compute occupancy and joint probabilities
-bin_vector = 0:3:100; % start : bin_size : end
-bin_size = bin_vector(2) - bin_vector(1);
+bin_size = 3;
+% Make sure that your binning vector includes every data point of
+% interp_behav_vec using the min/max function:
+bin_vector = min(interp_behav_vec):bin_size:max(interp_behav_vec)+bin_size;
 bin_centers_vector = bin_vector + bin_size/2;
 bin_centers_vector(end) = [];
 
@@ -48,17 +50,22 @@ for cell_num_i = 1:length(cell_num_vec)
         training_ts = create_training_set(ca_time, training_set_creation_method, training_set_portion);
         training_ts(running_ts == 0) = 0;
         for cell_i = 1:size(binarized_data,2)
-            [KL_divergence(cell_i), PDF(:,cell_i), occupancy_vector, prob_being_active(cell_i), tuning_curve_data(:,cell_i) ] = extract_1D_information(binarized_data(:,cell_i), interp_behav_vec, ca_time, bin_vector, training_ts);
+            [MI(cell_i), PDF(:,cell_i), occupancy_vector, prob_being_active(cell_i), tuning_curve_data(:,cell_i) ] = extract_1D_information(binarized_data(:,cell_i), interp_behav_vec, bin_vector, training_ts);
         end
         decoding_ts = ~training_ts;
         decoding_ts(running_ts == 0) = 0;
         occupancy_vector = occupancy_vector./occupancy_vector*(1/length(occupancy_vector));
         
+        if cell_num_vec(cell_num_i) == size(ca_data,2)
+        cell_used = logical(ones(size(ca_data,2),1)); % Let us use every cell for now
+        else
         cell_used = logical(zeros(size(ca_data,2),1));
         num_cell_to_use = cell_num_vec(cell_num_i);
         while sum(cell_used) < num_cell_to_use
            randomidx = ceil(rand*(length(cell_used)-1));
            cell_used(randomidx) = 1;
+        end
+        
         end
         
         [decoded_probabilities] = bayesian_decode1D(binarized_data, occupancy_vector, prob_being_active, tuning_curve_data, cell_used);

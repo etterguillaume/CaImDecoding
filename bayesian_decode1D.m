@@ -23,7 +23,7 @@ for step_i = 1:size(binarized_data,1)
     end
     
     decoded_probabilities(:,step_i) = expm1(sum(log1p(bayesian_step_prob),2)); % This should be used instead of simple product to avoid numerical underflow
-    decoded_probabilities(:,step_i) = decoded_probabilities(:,step_i)./sum(decoded_probabilities(:,step_i),'omitnan');    
+    decoded_probabilities(:,step_i) = decoded_probabilities(:,step_i)./sum(decoded_probabilities(:,step_i),'omitnan'); % The method above is an approximation, to obtain a posterior distribution, we can normalize every datapoint
     
 end
 
