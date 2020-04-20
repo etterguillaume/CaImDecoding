@@ -78,7 +78,7 @@ for k = 1:numShuffles
     
     % Permute the trace
     shuffled_binarized(1:random_ts) = binarized_trace(end-random_ts+1:end);
-    shuffled_binarized(end-random_ts+1:end) = binarized_trace(1:random_ts);
+    shuffled_binarized(random_ts+1:end) = binarized_trace(1:end-random_ts);
     
     [~, ~, ~, ~, shuffled_tuning_maps(:,:,k)] = extract_2D_information(shuffled_binarized, interp_behav_vec, X_bin_vector, Y_bin_vector, running_ts);
 end
@@ -98,7 +98,7 @@ for k = 1:numShuffles
     shuffled_binarized = zeros(length(binarized_trace),1);
     % Permute the trace
     shuffled_binarized(1:random_ts) = binarized_trace(end-random_ts+1:end);
-    shuffled_binarized(end-random_ts+1:end) = binarized_trace(1:random_ts);
+    shuffled_binarized(random_ts+1:end) = binarized_trace(1:end-random_ts);
     
     bootstrap_ts = zeros(numFrames,1);
     bootstrap_ts(1:half_ts) = 1;
