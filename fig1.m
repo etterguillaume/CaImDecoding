@@ -73,7 +73,7 @@ for k = 1:numShuffles
 
     % Permute the trace
     shuffled_binarized(1:random_ts) = binarized_trace(end-random_ts+1:end);
-    shuffled_binarized(end-random_ts+1:end) = binarized_trace(1:random_ts);
+    shuffled_binarized(random_ts+1:end) = binarized_trace(1:end-random_ts);
     
     % Compute tuning curve
     [~, ~, ~, ~, shuffled_tuning_curve(:,k)] = extract_1D_information(shuffled_binarized, interp_behav_vec, bin_vector, running_ts);
@@ -87,13 +87,13 @@ significant_tuning_curve(pvalue > 0.05) = 0;
 
 %% Compute significance - Method 2: bootstrapping
 actual_bootstrap_tuning_curve = zeros(length(bin_centers_vector), numShuffles);
-shuffled_tuning_curve = zeros(length(bin_centers_vector), numShuffles);
+shuffled_bootstrap_tuning_curve = zeros(length(bin_centers_vector), numShuffles);
 for k = 1:numShuffles
     random_ts = ceil(rand*length(ca_time));
     shuffled_binarized = zeros(length(binarized_trace),1);
     % Permute the trace
     shuffled_binarized(1:random_ts) = binarized_trace(end-random_ts+1:end);
-    shuffled_binarized(end-random_ts+1:end) = binarized_trace(1:random_ts);
+    shuffled_binarized(random_ts+1:end) = binarized_trace(1:end-random_ts);
     
     bootstrap_ts = inclusion_vector;
     for i = 1:length(bootstrap_ts)
