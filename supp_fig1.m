@@ -45,7 +45,7 @@ for trial_i = 1:30
     
     % Permute the trace
     shuffled_binarized(1:random_ts,:) = binarized_data(end-random_ts+1:end,:);
-    shuffled_binarized(end-random_ts+1:end,:) = binarized_data(1:random_ts,:);
+    shuffled_binarized(random_ts+1:end,:) = binarized_data(1:end-random_ts,:);
     
     for cell_i = 1:size(binarized_data,2)
         [MI(trial_i,cell_i), PDF(trial_i,:,cell_i), occupancy_vector, prob_being_active(trial_i,cell_i), tuning_curve_data(trial_i,:,cell_i) ] = extract_1D_information(binarized_data(:,cell_i), interp_behav_vec, bin_vector, bootstrap_ts);
