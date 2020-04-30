@@ -21,7 +21,7 @@ interp_behav_vec(end) = interp_behav_vec(end-1);
 
 %% Find periods of immobility
 % This will be usefull later to exclude immobility periods from analysis
-min_speed_threshold = 5; % 2 cm.s-1
+min_speed_threshold = 5; % 5 cm.s-1
 running_ts = velocity > min_speed_threshold;
 
 %% Compute occupancy and joint probabilities
