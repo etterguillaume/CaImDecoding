@@ -4,7 +4,7 @@ This is the supporting code and data for the manuscript: 'A probabilistic framew
 
 Link to the publication: https://www.frontiersin.org/articles/10.3389/fncir.2020.00019/abstract
 
-Link to the preprint repository: https://www.biorxiv.org/content/10.1101/827030v1
+Link to the preprint repository: https://www.biorxiv.org/content/10.1101/827030v3
 
 How to cite:
 Etter, G., Manseau, F. & Williams, S. A probabilistic framework for decoding behavior from in vivo calcium imaging data. Front. Neural Circuits 14, (2020).
